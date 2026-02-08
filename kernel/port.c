@@ -145,29 +145,65 @@ struct port ports[NPORT];
 void 
 port_init(void)
 {
-    // Initialize the ports list.  Upon initialization, the following should be
-    // true:
-    //    - The Predefined ports (see port.h) should all be owned by the
-    //      kernel.
-    //    - All other ports should be marked as free.
-    //    - All ports should have their start and end set to indicate an empty
-    //      buffer
-    
-    // Loop through 0 to NPORT-1, initialize status of kernal ports and
-    // non-kernal ports. Make sure that all ports are empty.
 
-    // YOUR CODE HERE
+    for(int i = 0; i < NPORT; i++){
+
+        if(i == 0){
+            ports[0].owner = PORT_CONSOLEIN;
+            ports[0].type = 1;   
+            ports[0].free = 1;
+            ports[0].count = 0;
+            ports[0].head = 0;
+            ports[0].tail = 0;
+        }
+        else if(i == 1){
+            ports[1].owner = PORT_CONSOLEOUT;
+            ports[1].type = 1;
+            ports[1].free = 1;
+            ports[1].count = 0;
+            ports[1].head = 0;
+            ports[1].tail = 0;
+        }
+        else if (i == 2){
+            ports[2].owner = PORT_DISKCMD;
+            ports[2].free = 1;
+            ports[2].type = 1;
+            ports[2].count = 0;
+            ports[2].head = 0;
+            ports[2].tail = 0;
+        }
+
+        ports[i].free = 0;
+        ports[i].count = 0;
+        ports[i].head = 0;
+        ports[i].tail = 0;
+
+    }
+
 }
+
 
 
 // Close the port.
 void 
 port_close(int port)
 {
-    // Close the port.  If the port is not open, nothing will happen.  However,
-    // if it is open, we empty its contents and mark it as free.
 
-    // YOUR CODE HERE
+    if(ports[port].free == 0)
+        return;
+    
+
+    if(ports[port].type == PORT_TYPE_KERNEL)
+        return;
+
+
+    if(ports[port].free > 0 || ports[port].free < 0){
+        ports[port].count = 0;
+        ports[port].head = 0;
+        ports[port].tail = 0;
+        ports[port].owner = -1;
+        ports[port].free = 0;
+    }
 }
 
 
@@ -183,8 +219,20 @@ port_acquire(int port, procid_t proc_id)
     // then return the port number allocated.
     // 
     // If this operation fails, return -1.
+    int allocated;
+    while(ports[port].owner == -1){
+        ports[port] = ports[port+1];
+        allocated++;
+    }
 
-    // YOUR CODE HERE
+    if(ports[port].free != 0){
+        return -1;
+    }
+    else{
+        ports[port].owner = proc_id;
+        ports[port].free = 1;
+        return port + allocated;
+    }
     
     return -1;
 }
@@ -194,14 +242,21 @@ port_acquire(int port, procid_t proc_id)
 int 
 port_write(int port, char *buf, int n)
 {
-    // If the port is not open, return -1
-    // Write, at most, n bytes to the buffer.  If the buffer fills
-    // up before n bytes, stop writing. Return the actual number of bytes
-    // you have written. Be sure to update the count field as you
-    // write it.
+    
+    if(ports[port].free != 0){
+        return -1;
+    }
 
-    // YOUR CODE HERE
-    return -1;
+    int num = 0;
+    for(int i = 0; i < n; i++){
+
+        num++;
+        ports[port].buffer[i] += *buf;
+        ports[port].count = num;
+    }
+
+    return num; 
+
 }
 
 
@@ -209,13 +264,24 @@ port_write(int port, char *buf, int n)
 int 
 port_read(int port, char *buf, int n)
 {
-    // If the port is not open, return -1.
     // Read at most n bytes from the port. If the port contents are
     // exhausted before you complete the read, stop reading.
     // Return the actual number of bytes you have read.
     // Be sure to update count as you read.
 
     // YOUR CODE HERE
+    if(ports[port].free != 0){
+        return -1;
+    }
 
-    return -1;
+    int num = 0;
+    for(int i = 0; i < n; i++){
+
+        num++;
+        //printf(ports[port].buffer[buf[i]]);
+        ports[port].count = num;
+    }
+
+    return num; 
+
 }
